@@ -2,8 +2,10 @@ class Solution:
 
     def __init__(self):
         self.sequence = ''
-        self.overlaps = []
-        self.used_oligos_count = 0
+        self.overlaps = [] # (oligo1, oligo2, overlap_len)
+
+    def used_oligos_count(self):
+        return len(self.overlaps) + 1
 
 class Instance:
 
