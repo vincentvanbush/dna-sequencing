@@ -2,7 +2,7 @@ class Solution:
 
     def __init__(self):
         self.sequence = ''
-        self.overlaps = [] # (oligo1, oligo2, overlap_len)
+        self.overlaps = [] # (oligo1, oligo2, overlap_len, oligo1_starting_index)
 
     def used_oligos_count(self):
         return len(self.overlaps) + 1
@@ -15,6 +15,10 @@ class Instance:
         self.solution = None
 
     def solve(self, pipeline):
-        for proc in pipeline:
-            self.solution = proc(self)
+        # for proc in pipeline:
+        #     self.solution = proc(self)
+
+        # now only one procedure returning solution
+        self.solution = pipeline[0](self)
+        
         return self.solution

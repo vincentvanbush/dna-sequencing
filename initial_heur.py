@@ -4,6 +4,7 @@ def create_initial_solution(instance):
 
 	oligos = instance.oligos
 	result_length = instance.result_length
+	oligos_len = len(oligos[0].nuc)
 
 	sequence = ''
 	overlaps = []
@@ -41,11 +42,37 @@ def create_initial_solution(instance):
 	# print oligo_with_min_in_edges.nuc
 	# print min_in_edges_val
 
+	current_oligo = oligo_with_min_in_edges
+	current_oligo.used = True
+	left_oligo_ind_in_seq = 0
+	sequence += current_oligo.nuc
 
+	while len(sequence) < result_length: # poprawic warunek
+		max_overlap = 0
+		oligo_with_max_overlap = None
+		for oligo2 in overlaps_pairs[current_oligo]:
+			if overlaps_pairs[current_oligo][oligo2] > max_overlap and oligo2.used == False:
+				max_overlap = overlaps_pairs[current_oligo][oligo2]
+				oligo_with_max_overlap = oligo2
+		if oligo_with_max_overlap != None:
+			oligo_with_max_overlap.used = True
+			sequence += oligo_with_max_overlap.nuc[max_overlap:]
+			overlaps.append((current_oligo, oligo_with_max_overlap, max_overlap, left_oligo_ind_in_seq))
 
+			current_oligo = oligo_with_max_overlap
+			left_oligo_ind_in_seq = left_oligo_ind_in_seq + oligos_len - max_overlap
 
-	
-		
+		else:
+			pass
+			# sytuacja gdy nie mozna znalezc nastepnika
 
+	# print sequence
+	# for tup in overlaps:
+	# 	o1, o2, ov, ind = tup
+	# 	print o1, o2, ov, ind
 
-	return Solution()
+	solution = Solution()
+	solution.sequence = sequence
+	solution.overlaps = overlaps
+
+	return solution
