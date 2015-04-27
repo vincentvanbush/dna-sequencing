@@ -25,8 +25,10 @@ if __name__ == '__main__':
 
         print 'Instance has %d lines, result length = %s' % (len(lines), result_length)
 
+        oligos = [Oligo(x) for x in lines]
+
         # based on what we've read, create the problem instance
-        instance = Instance(lines, result_length)
+        instance = Instance(oligos, result_length)
         solution = instance.solve([create_initial_solution, simulated_annealing])
 
         print 'Used %d oligonucleotides' % solution.used_oligos_count
