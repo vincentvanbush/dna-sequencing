@@ -2,7 +2,7 @@ class Solution:
 
     def __init__(self):
         self.sequence = ''
-        self.overlaps = [] # (oligo1, oligo2, overlap_len, o1_pos)
+        self.overlaps = [] # (oligo1, oligo2, overlap_len, oligo1_starting_index)
 
     def __init__(self, solution):
         self.sequence = solution.sequence
@@ -25,4 +25,5 @@ class Instance:
     def solve(self, pipeline):
         for proc in pipeline:
             self.solution = proc(self)
+
         return self.solution

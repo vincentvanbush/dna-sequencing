@@ -4,6 +4,7 @@ import solver
 from solver import Instance
 from annealing import simulated_annealing
 from initial_heur import create_initial_solution
+from oligo import Oligo
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -31,6 +32,6 @@ if __name__ == '__main__':
         instance = Instance(oligos, result_length)
         solution = instance.solve([create_initial_solution, simulated_annealing])
 
-        print 'Used %d oligonucleotides' % solution.used_oligos_count
+        print 'Used %d oligonucleotides' % solution.used_oligos_count()
         print solution.sequence
         sys.exit(0)
