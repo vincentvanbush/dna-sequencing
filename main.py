@@ -21,6 +21,7 @@ if __name__ == '__main__':
         # infer the length of desired result from filename
         m = re.search('[0-9]+\.([0-9]+)', fname)
         lines = f.read().split('\n')
+        lines = [l for l in lines if l != '']
         oligo_len = len(lines[0])
         result_length = oligo_len - 1 + int(m.group(1))
 
@@ -30,7 +31,7 @@ if __name__ == '__main__':
 
         # based on what we've read, create the problem instance
         instance = Instance(oligos, result_length)
-        solution = instance.solve([create_initial_solution, simulated_annealing])
+        solution = instance.solve([create_initial_solution])
 
         print 'Used %d oligonucleotides' % solution.used_oligos_count()
         print solution.sequence
