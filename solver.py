@@ -1,12 +1,9 @@
 class Solution:
 
-    def __init__(self):
-        self.sequence = ''
-        self.overlaps = [] # (oligo1, oligo2, overlap_len, oligo1_starting_index)
-
-    def __init__(self, solution):
-        self.sequence = solution.sequence
-        self.overlaps = solution.overlaps
+    def __init__(self, solution=None):
+        self.sequence = '' if solution == None else solution.sequence
+        self.overlaps = [] if solution == None else solution.overlaps
+        # (oligo1, oligo2, overlap_len, oligo1_starting_index)
 
     def used_oligos_count(self):
         return len(self.overlaps) + 1
