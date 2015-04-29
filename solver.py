@@ -5,6 +5,7 @@ class Solution:
         self.overlaps = [] if solution == None else solution.overlaps
         # (oligo1, oligo2, overlap_len, oligo1_starting_index)
 
+    @property
     def used_oligos_count(self):
         return len(self.overlaps) + 1
 

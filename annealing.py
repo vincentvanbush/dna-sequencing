@@ -9,14 +9,15 @@ def simulated_annealing(instance):
     random.seed()
 
     oligo_length = instance.oligo_length
-    solution.used_oligos = filter(lambda x: x.used, instance.oligos)
-    solution.unused_oligos = filter(lambda x: not x.used, instance.oligos)
+    print instance.solution
+    used_oligos = filter(lambda x: x.used, instance.oligos)
+    unused_oligos = filter(lambda x: not x.used, instance.oligos)
 
     def transform(solution):
         new_solution = Solution(solution)
 
         def choose_used():
-            probability = 0.8 * ((float(len(solution.used_oligos)) / len(solution.oligos)) ** 2)
+            probability = 0.8 * ((float(len(used_oligos)) / len(used_oligos + unused_oligos)) ** 2)
             dice = random.random()
             return (dice < probability)
 
@@ -26,12 +27,12 @@ def simulated_annealing(instance):
         o1, o2, overlap_len, o1_pos = min_overlap
 
         # insert random oligo with random offset
-        choose_from = solution.used_oligos if choose_used() else solution.unused_oligos
+        choose_from = used_oligos if choose_used() else unused_oligos
         chosen_oligo = random.choice(choose_from)
 
         # offset is defined as distance from the beginning of the overlap
         # (oligo length 10, minimum offset -9, overlap len 3, max offset 3)
-        offset = random.randint(oligo_length + o1.overlap(o2)) - (oligo_length - 1)
+        offset = random.randint(0, oligo_length + o1.overlap(o2)) - (oligo_length - 1)
 
         new_oligo_pos = o1_pos + oligo_length - overlap_len + offset
         new_oligo_end = new_oligo_pos + (oligo_length - 1)
@@ -51,8 +52,12 @@ def simulated_annealing(instance):
 
         # new solution's count of oligos used in sequence
 
+        print new_solution.sequence
+        print 'Press enter...'
+        raw_input()
         return new_solution
 
+    mode = WARMING
     alpha_cooling = 0.9
     alpha_warming = 1
     cooling_age_length = 300
@@ -63,6 +68,7 @@ def simulated_annealing(instance):
 
     def success():
         chance = random.random()
+        print new_quality, quality, temperature, modulation
         result = exp((new_quality - quality)/(temperature * modulation))
         return True if chance <= result else False
 
@@ -76,21 +82,21 @@ def simulated_annealing(instance):
     moves_without_improvement = 0
     best_quality = 0
 
-    while moves_without_improvement < max_moves_without_improvement and not time_exc:
-        def update_last_moves_acceptance(acc):
-            last_moves.append(acc)
-            x = not acc
-            if last_moves[0] == x:
-                accepted_moves_out_of_last_n += 1 if acc else -1
-            last_moves.popleft()
+    def update_last_moves_acceptance(acc, previous):
+        last_moves.append(acc)
+        x = not acc
+        if last_moves[0] == x:
+            return previous + 1 if acc else previous - 1
+        last_moves.popleft()
 
+    while moves_without_improvement < max_moves_without_improvement and not time_exc:
         quality = instance.solution.used_oligos_count
         attempts = 0
         transformed_solution = transform(instance.solution)
         new_quality = transformed_solution.used_oligos_count
 
         if (new_quality > quality): # better
-            if mode == WARMING: update_last_moves_acceptance(True)
+            if mode == WARMING: accepted_moves_out_of_last_n = update_last_moves_acceptance(True, accepted_moves_out_of_last_n)
             accepted_moves += 1
             quality = new_quality
             if new_quality > best_quality:
@@ -101,12 +107,12 @@ def simulated_annealing(instance):
         elif new_quality == quality: # the same
             accepted_moves += 1
             moves_without_improvement += 1
-            if mode == WARMING: update_last_moves_acceptance(True)
+            if mode == WARMING: accepted_moves_out_of_last_n = update_last_moves_acceptance(True, accepted_moves_out_of_last_n)
             instance.solution = transformed_solution
         else: # worse
             moves_without_improvement += 1
             succ = success()
-            update_last_moves_acceptance(succ)
+            accepted_moves_out_of_last_n = update_last_moves_acceptance(succ, accepted_moves_out_of_last_n)
             if succ:
                 accepted_moves += 1
                 quality = new_quality
