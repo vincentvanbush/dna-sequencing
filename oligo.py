@@ -1,11 +1,15 @@
 class Oligo:
     def __init__(self, nuc):
         self.nuc = nuc
-        self.used = False
+        self.used_times = 0
 
     @property
     def length(self):
         return len(self.nuc)
+
+    @property
+    def used(self):
+        return True if self.used_times > 0 else False
 
     def overlap(self, r_oli):
         if r_oli.length != self.length:
