@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
         # based on what we've read, create the problem instance
         instance = Instance(oligos, result_length)
-        solution = instance.solve([create_initial_solution])
+        solution = instance.solve([create_initial_solution, simulated_annealing])
 
         print 'Used %d oligonucleotides' % solution.used_oligos_count()
         print solution.sequence
