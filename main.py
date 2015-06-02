@@ -33,6 +33,8 @@ if __name__ == '__main__':
         instance = Instance(oligos, result_length)
         solution = instance.solve([create_initial_solution, simulated_annealing])
 
-        print 'Used %d oligonucleotides' % solution.used_oligos_count()
+        print 'Used %d oligonucleotides' % solution.used_oligos_count
+        print 'Sequence length is %d' % len(solution.sequence)
+        print ''
         print solution.sequence
         sys.exit(0)
