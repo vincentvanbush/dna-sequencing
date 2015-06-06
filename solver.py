@@ -13,6 +13,7 @@ class Instance:
 
     def __init__(self, oligos, result_length):
         self.oligos = oligos
+        self.oligos_dict = { o.nuc: o for o in oligos }
         self.result_length = result_length
         self.solution = None
 
