@@ -1,19 +1,22 @@
 from solver import Solution
 import random
+import re
 
-def create_initial_solution(instance):
+def create_initial_solution(instance, path):
 
 	oligos = instance.oligos
 	result_length = instance.result_length
 	oligos_len = len(oligos[0].nuc)
 
 	overlaps_pairs = create_overlaps_hash(oligos)
-	starting_oligo = choose_starting_oligo_alternative(oligos, overlaps_pairs)
+	starting_oligo = choose_starting_oligo(oligos, overlaps_pairs)
 	sequence, overlaps = make_starting_solution(starting_oligo, result_length, oligos_len, overlaps_pairs)
 
 	solution = Solution()
 	solution.sequence = sequence
 	solution.overlaps = overlaps
+
+	log_to_file (solution, overlaps, sequence, oligos_len, path)
 
 	return solution
 
@@ -79,11 +82,11 @@ def make_starting_solution(starting_oligo, result_length, oligos_len, overlaps_p
 	left_oligo_ind_in_seq = 0
 	sequence += current_oligo.nuc
 
-	print "-----------------------------------------------------"
-	print "We are creating initial solution"
-	print "Oligo length is %d" % (len(current_oligo.nuc))
-	print "Desired sequence length is %d nucs" % (result_length)
-	print "-----------------------------------------------------"
+	# print "-----------------------------------------------------"
+	# print "We are creating initial solution"
+	# print "Oligo length is %d" % (len(current_oligo.nuc))
+	# print "Desired sequence length is %d nucs" % (result_length)
+	# print "-----------------------------------------------------"
 
 	# searches starting sequence until its length is greater or equal desired length or until there ara no more unused oligos
 	while len(sequence) < result_length:
@@ -135,26 +138,38 @@ def make_starting_solution(starting_oligo, result_length, oligos_len, overlaps_p
 		overlaps = overlaps[0:-1]
 		sequence = sequence[0:result_length]
 
+	return sequence, overlaps
 
-	# print sequence
-	# print len(sequence)
-	# for tup in overlaps:
-	# 	o1, o2, ov, ind = tup
-	# 	print o1, o2, ov, ind
+def log_to_file (solution, overlaps, sequence,  oligos_len, path):
+	log_path = 'tests/sequence_' + path
+	seq = open(log_path, 'a')
 
+
+	m = re.search('[0-9]+\.([0-9]+)(\+|-)([0-9]+)', path)
+	if re.search('.+\+', path) != None:
+		desired_oligos_use = int(m.group(1))
+	else:
+		desired_oligos_use = int(m.group(1)) - int(m.group(3))
+	percentage_use = (float(solution.used_oligos_count)/desired_oligos_use)*100.0
+	seq.write('Used %d oligonucleotides\n' % solution.used_oligos_count)
+	seq.write('Use rates is %.2f%%\n' % percentage_use)
+	
+	c = 0
+	for i in xrange(len(sequence)):
+		seq.write(sequence[i])
+		c += 1
+		if c % 50 == 0:
+			seq.write('\n')
+			c = 0
+
+	seq.write('\n\n')
 
 	shift = 0
 	for tup in overlaps:
-		shift = tup[3]
+		shift = tup[3] % 100
 		offset = shift * ' '
-		print offset + tup[0].nuc
+		seq.write(offset + tup[0].nuc + '\n')
 	
 	shift += oligos_len - overlaps[-1][2]
 	offset = shift * ' '
-	print offset + overlaps[-1][1].nuc
-
-	print ""
-	for (oligo, rest) in overlaps_pairs.items():
-		print oligo.nuc + " " + str(oligo.used)
-
-	return sequence, overlaps
+	seq.write(offset + overlaps[-1][1].nuc + '\n')

@@ -20,8 +20,8 @@ class Instance:
     def oligo_length(self):
         return len(self.oligos[1].nuc)
 
-    def solve(self, pipeline):
+    def solve(self, pipeline, path):
         for proc in pipeline:
-            self.solution = proc(self)
+            self.solution = proc(self, path)
 
         return self.solution
