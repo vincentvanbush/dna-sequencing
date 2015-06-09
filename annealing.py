@@ -161,7 +161,7 @@ def simulated_annealing(instance, path):
         else:
             return prev
 
-    best_quality = instance.solution.used_oligos_count
+    best_quality = len(filter(lambda o: o.used, instance.oligos))
     best_usages = { oligo: oligo.used_times for oligo in instance.oligos }
     best_solution = instance.solution
 
@@ -174,7 +174,7 @@ def simulated_annealing(instance, path):
         # os.system('clear')
         # print ''
         # print len(filter(lambda x: not x.used, instance.oligos))
-        quality = instance.solution.used_oligos_count
+        quality = len(filter(lambda o: o.used, instance.oligos))
         attempts = 0
         transformed_solution, old_overlaps, old_oligo_usage = transform(instance.solution)
         new_quality = len(filter(lambda o: o.used, instance.oligos))# transformed_solution.used_oligos_count
@@ -247,7 +247,6 @@ def simulated_annealing(instance, path):
         # print 'Press enter...'
         # raw_input()
 
-    log_to_file(instance, instance.solution, None, instance.solution.sequence, oligo_length, path, None, "ANNEALING")
-
     revert_to_best()
+    log_to_file(instance, best_solution, None, best_solution.sequence, oligo_length, path, None, "ANNEALING")
     return best_solution

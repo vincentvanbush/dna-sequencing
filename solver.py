@@ -45,7 +45,7 @@ def log_to_file (instance, solution, overlaps, sequence,  oligos_len, path, time
         seq.write('initial\n')
         seq.write('%.2f\n' % time)
     elif stage == 'ANNEALING':
-        seq.write('annealing')
+        seq.write('annealing\n')
     seq.write('%d\n' % len(filter(lambda o: o.used, instance.oligos)))
     seq.write('%.2f%%\n' % percentage_use)
 
