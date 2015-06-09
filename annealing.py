@@ -1,4 +1,5 @@
 from solver import Solution
+from solver import log_to_file
 from math import exp
 from copy import copy
 from math import tanh
@@ -10,11 +11,9 @@ WARMING = 1
 max_revert_attempts = 100
 revert_attempts = 0
 
-def simulated_annealing(instance):
+def simulated_annealing(instance, path):
     global revert_attempts, max_revert_attempts
 
-    # print "press enter"
-    # raw_input()
     random.seed()
 
     oligo_length = instance.oligo_length
@@ -248,6 +247,7 @@ def simulated_annealing(instance):
         # print 'Press enter...'
         # raw_input()
 
+    log_to_file(instance, instance.solution, None, instance.solution.sequence, oligo_length, path, None, "ANNEALING")
 
     revert_to_best()
     return best_solution

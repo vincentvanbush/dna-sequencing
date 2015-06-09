@@ -25,16 +25,29 @@ if __name__ == '__main__':
         oligo_len = len(lines[0])
         result_length = oligo_len - 1 + int(m.group(1))
 
+
         print 'Instance has %d lines, result length = %s' % (len(lines), result_length)
 
         oligos = [Oligo(x) for x in lines]
 
         # based on what we've read, create the problem instance
         instance = Instance(oligos, result_length)
-        solution = instance.solve([create_initial_solution, simulated_annealing])
+        solution = instance.solve([create_initial_solution, simulated_annealing], fname)
 
-        print 'Used %d oligonucleotides' % solution.used_oligos_count
+        if re.search('.+\+', fname) != None:
+            desired_oligos_use = int(m.group(1))
+        else:
+            desired_oligos_use = len(instance.oligos)
+
+
+
+        # percentage_use = (float(solution.used_oligos_count)/desired_oligos_use)*100.0
+        percentage_use = (float(len(filter(lambda o: o.used, instance.oligos)))/desired_oligos_use)*100.0
+
+        # print 'File name: %s' % fname
+        print 'Used %d oligonucleotides' % len(filter(lambda o: o.used, instance.oligos))
         print 'Sequence length is %d' % len(solution.sequence)
+        print 'Use rates is %.2f%%' % percentage_use
         print ''
-        print solution.sequence
+
         sys.exit(0)

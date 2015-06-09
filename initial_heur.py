@@ -1,19 +1,29 @@
 from solver import Solution
+from solver import log_to_file
+from time import time
 import random
 
-def create_initial_solution(instance):
+def create_initial_solution(instance, path):
 
 	oligos = instance.oligos
 	result_length = instance.result_length
 	oligos_len = len(oligos[0].nuc)
 
 	overlaps_pairs = create_overlaps_hash(oligos)
-	starting_oligo = choose_starting_oligo_alternative(oligos, overlaps_pairs)
+
+	start = time()
+	starting_oligo = choose_starting_oligo(oligos, overlaps_pairs)
 	sequence, overlaps = make_starting_solution(starting_oligo, result_length, oligos_len, overlaps_pairs)
+	stop = time()
+
+	elapsed_time = round(stop-start,2)
 
 	solution = Solution()
 	solution.sequence = sequence
 	solution.overlaps = overlaps
+
+
+	log_to_file (instance, solution, overlaps, sequence, oligos_len, path, elapsed_time, "INITIAL")
 
 	return solution
 
@@ -79,11 +89,11 @@ def make_starting_solution(starting_oligo, result_length, oligos_len, overlaps_p
 	left_oligo_ind_in_seq = 0
 	sequence += current_oligo.nuc
 
-	print "-----------------------------------------------------"
-	print "We are creating initial solution"
-	print "Oligo length is %d" % (len(current_oligo.nuc))
-	print "Desired sequence length is %d nucs" % (result_length)
-	print "-----------------------------------------------------"
+	# print "-----------------------------------------------------"
+	# print "We are creating initial solution"
+	# print "Oligo length is %d" % (len(current_oligo.nuc))
+	# print "Desired sequence length is %d nucs" % (result_length)
+	# print "-----------------------------------------------------"
 
 	# searches starting sequence until its length is greater or equal desired length or until there ara no more unused oligos
 	while len(sequence) < result_length:
@@ -134,27 +144,5 @@ def make_starting_solution(starting_oligo, result_length, oligos_len, overlaps_p
 		oligo_to_remove.used_times -= 1
 		overlaps = overlaps[0:-1]
 		sequence = sequence[0:result_length]
-
-
-	# print sequence
-	# print len(sequence)
-	# for tup in overlaps:
-	# 	o1, o2, ov, ind = tup
-	# 	print o1, o2, ov, ind
-
-
-	shift = 0
-	for tup in overlaps:
-		shift = tup[3]
-		offset = shift * ' '
-		print offset + tup[0].nuc
-	
-	shift += oligos_len - overlaps[-1][2]
-	offset = shift * ' '
-	print offset + overlaps[-1][1].nuc
-
-	print ""
-	for (oligo, rest) in overlaps_pairs.items():
-		print oligo.nuc + " " + str(oligo.used)
 
 	return sequence, overlaps
