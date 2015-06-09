@@ -42,12 +42,12 @@ def log_to_file (instance, solution, overlaps, sequence,  oligos_len, path, time
     # percentage_use = (float(solution.used_oligos_count)/desired_oligos_use)*100.0
     percentage_use = (float(len(filter(lambda o: o.used, instance.oligos)))/desired_oligos_use)*100.0
     if stage == 'INITIAL':
-        seq.write('Initial solution\n')
-        seq.write('Searching time: %.2f\n' % time)
+        seq.write('initial\n')
+        seq.write('%.2f\n' % time)
     elif stage == 'ANNEALING':
-        seq.write('Solution after annealing')
-    seq.write('Used %d oligonucleotides\n' % len(filter(lambda o: o.used, instance.oligos)))
-    seq.write('Use rates is %.2f%%\n' % percentage_use)
+        seq.write('annealing')
+    seq.write('%d\n' % len(filter(lambda o: o.used, instance.oligos)))
+    seq.write('%.2f%%\n' % percentage_use)
 
     c = 0
     for i in xrange(len(sequence)):
