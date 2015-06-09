@@ -1,122 +1,144 @@
 from solver import Solution
 from math import exp
 from copy import copy
+from math import tanh
+import os
 import random
 
 COOLING = 0
 WARMING = 1
+max_revert_attempts = 100
+revert_attempts = 0
 
 def simulated_annealing(instance):
-    print "press enter"
-    raw_input()
+    global revert_attempts, max_revert_attempts
+
+    # print "press enter"
+    # raw_input()
     random.seed()
 
     oligo_length = instance.oligo_length
-    print instance.solution
+    # print instance.solution
+
+
 
     def transform(solution):
         new_solution = Solution(solution)
         used_oligos = filter(lambda x: x.used, instance.oligos)
         unused_oligos = filter(lambda x: not x.used, instance.oligos)
 
-        # print "Used:"
-        # for o in used_oligos: print o, " %d" % o.used_times,
-        # print "\nUnused:"
-        # for o in unused_oligos: print o, " %d" % o.used_times,
-        # print
-
         def choose_used():
-            print "USED %d UNUSED %d" % (len(used_oligos), len(unused_oligos))
             probability = 0.8 * ((float(len(used_oligos)) / len(used_oligos + unused_oligos)) ** 2)
             dice = random.random()
             return (dice < probability)
 
-        # find minimally overlapping pair of oligas
-        # TODO: lookup all minimums, not just one
-        print "%d overlaps" % len(solution.overlaps)
-        min_overlap = min(solution.overlaps, key=lambda(o1,o2,len,pos): len)
-        o1, o2, overlap_len, o1_pos = min_overlap
-
-        # insert random oligo with random offset
-        # print "used %d, unused %d" % (len(used_oligos), len(unused_oligos))
-        choose_from = used_oligos if choose_used() else unused_oligos
+        if len(used_oligos) == 0: choose_from = unused_oligos
+        elif len(unused_oligos) == 0: choose_from = used_oligos
+        else: choose_from = used_oligos if choose_used() else unused_oligos
         chosen_oligo = random.choice(choose_from)
 
-        # offset is defined as distance from the beginning of the overlap
-        # (oligo length 10, minimum offset -9, overlap len 3, max offset 3)
-        offset = random.randint(0, oligo_length + o1.overlap(o2)) - (oligo_length - 1)
+        new_oligo_pos = -1
+        # print len(solution.overlaps)
+        if len(solution.overlaps) > 0:
+            tabu_filtered_overlaps = filter(lambda x: x not in tabu_overlaps, solution.overlaps)
+            min_overlap = min(tabu_filtered_overlaps, key=lambda(o1,o2,len,pos): len)
+            # Add overlap to tabu list if exceeded limit
+            global revert_attempts, max_revert_attempts
+            if revert_attempts >= max_revert_attempts:
+                revert_attempts = 0
+                tabu_overlaps.append(min_overlap)
+            left_trailing = -1 * solution.overlaps[0][3]
+            right_trailing = -1 * (len(instance.solution.sequence) - solution.overlaps[-1][3] - 2 * oligo_length + solution.overlaps[-1][2])
+            o1, o2, overlap_len, o1_pos = min_overlap
 
-        new_oligo_pos = o1_pos + oligo_length - overlap_len + offset
+            # print overlap_len, left_trailing, right_trailing
+
+            while not (new_oligo_pos in range(0, len(solution.sequence) - oligo_length + 1)):
+                if (overlap_len <= min(left_trailing, right_trailing)) or (left_trailing == 0 and right_trailing == 0):
+                    # print "Inserting in the middle"
+                    # calculate offset defined as distance from the overlap's beginning
+                    offset = random.randint(0, oligo_length + o1.overlap(o2)) - oligo_length
+                    new_oligo_pos = o1_pos + oligo_length - overlap_len + offset
+
+                elif (overlap_len > left_trailing) and (overlap_len > right_trailing):
+                    # print "Inserting in random trailing space"
+                    # left_index = random.randint(0, -1 * left_trailing)
+                    # right_index = random.randint(len(solution.sequence) - oligo_length - (-1 * right_trailing) + 1, len(solution.sequence) - oligo_length + 1)
+                    left_index = 0
+                    right_index = len(solution.sequence) - oligo_length
+                    new_oligo_pos = random.choice([left_index, right_index])
+
+                elif overlap_len > left_trailing:
+                    # print "Inserting in left trailing space"
+                    # new_oligo_pos = random.randint(0, -1 * left_trailing)
+                    new_oligo_pos = 0
+
+                elif overlap_len > right_trailing:
+                    # print "Inserting in right trailing space"
+                    # new_oligo_pos = random.randint(len(solution.sequence) - oligo_length - (-1 * right_trailing) + 1, len(solution.sequence) - oligo_length + 1)
+                    new_oligo_pos = len(solution.sequence) - oligo_length
+
+                else:
+                    new_oligo_pos = random.randint(0, len(solution.sequence) - oligo_length)
+        else:
+            new_oligo_pos = random.randint(0, len(solution.sequence) - oligo_length)
+        # print "Inserting %s at %d" % (chosen_oligo, new_oligo_pos)
+
         new_oligo_end = new_oligo_pos + (oligo_length - 1)
-        # the area of new oligo's potential impact (inclusive)
-        impact_left = new_oligo_pos - (oligo_length - 1)
-        impact_right = new_oligo_pos + 2 * (oligo_length - 1)
-        # the area to update overlaps (inclusive)
-        update_left = impact_left - (oligo_length - 1)
-        update_right = impact_right + (oligo_length - 1)
 
-        # calculate the current number of used oligos in the area
-        oligos_in_impact_area = [o1 for (o1, o2, l, p) in solution.overlaps if p in range(impact_left, new_oligo_end)]
-        used_oligos_before_sub = len(oligos_in_impact_area)
+        # this is some info returned for reverting changes
+        old_overlaps = copy(solution.overlaps)
+        old_oligo_usage = { oligo: oligo.used_times for oligo in instance.oligos }
 
-        # decrement used_times for each oligo; we'll increment each one again later
-        deleted_oligos = []
-        for oligo in oligos_in_impact_area:
-            oligo.used_times -= 1
-            deleted_oligos.append(oligo)
+        # substitute the newly chosen oligo into the sequence
+        new_solution.sequence = solution.sequence[:new_oligo_pos] + chosen_oligo.nuc + solution.sequence[new_oligo_end + 1:]
+        # print new_solution.sequence
 
-        # insert the chosen_oligo in the chosen position
-        new_solution.sequence = new_solution.sequence[:new_oligo_pos] + chosen_oligo.nuc + new_solution.sequence[new_oligo_end + 1:]
-
-        # new solution's count of oligos used in sequence
-
-        # update oligos in impact area
-        added_oligos = []
-        for i in range(impact_left, impact_right - oligo_length + 1):
-            nuc = new_solution.sequence[i:i + oligo_length]
+        # calculate new usage of oligos
+        new_overlaps = []
+        previous = None
+        for oligo in instance.oligos: oligo.used_times = 0
+        for i in range(len(new_solution.sequence) - oligo_length + 1):
+            nuc = new_solution.sequence[i:i+oligo_length]
             if instance.oligos_dict.has_key(nuc):
                 oligo = instance.oligos_dict[nuc]
                 oligo.used_times += 1
-                added_oligos.append(oligo)
+                if previous == None: # next iteration if it's the first found oligo
+                    previous = (oligo, i)
+                    continue
+                else:
+                    prev_oligo, prev_pos = previous
+                    overlap_len = oligo_length - i + prev_pos
+                    new_overlaps.append((prev_oligo, oligo, overlap_len, prev_pos))
+                    previous = (oligo, i)
 
-        # update all the overlaps
-        old_affected_overlaps = [o for o in solution.overlaps if o[3] in range(update_left, new_oligo_end + oligo_length)]
-        new_overlaps = []
-        previous = None
-        for i in range(update_left, update_right - oligo_length + 1):
-            nuc = new_solution.sequence[i:i + oligo_length]
-            if instance.oligos_dict.has_key(nuc):
-                oligo = instance.oligos_dict[nuc]
-                if previous == None: continue
-                prev_oligo, prev_pos = previous
-                overlap_len = prev_oligo.overlap(oligo)
-                new_overlaps.append((prev_oligo, oligo, overlap_len, prev_pos))
-                previous = (oligo, i)
+        x = len(filter(lambda o: o.used, instance.oligos))
+        # print x, "used out of", len(instance.oligos)
+        if x > len(instance.oligos):
+            raw_input()
 
-        old_overlaps_l = [o for o in solution.overlaps if o[3] < update_left]
-        old_overlaps_r = [o for o in solution.overlaps if o[3] >= new_oligo_end + oligo_length]
-        new_solution.overlaps = old_overlaps_l + new_overlaps + old_overlaps_r
-        print "New: ", len(new_solution.overlaps)
+        new_solution.overlaps = new_overlaps
 
-        print new_solution.sequence
-        # print 'Press enter...'
-        # raw_input()
-        return new_solution, added_oligos, deleted_oligos, copy(solution.overlaps)
+        return new_solution, old_overlaps, old_oligo_usage
+
+        pass
 
     mode = WARMING
-    alpha_cooling = 0.9
-    alpha_warming = 1
-    cooling_age_length = 300
+    alpha_cooling = 0.99
+    alpha_warming = 3
+    cooling_age_length = 100
     initial_temp = 100.0
-    max_moves_without_improvement = 1000
-    modulation = 0.1
-    warming_threshold = 0.9
+    max_moves_without_improvement = 5000
+    modulation = 0.01
+    warming_threshold = 0.98
+    # revert_threshold = 0.97
+    revert_threshold = tanh(pow(instance.result_length, 1.0/7)) ** 2
 
     def success():
         chance = random.random()
         # print new_quality, quality, temperature, modulation
-        result = exp((new_quality - quality)/(temperature * modulation))
-        print "chance=%f, result=%f" % (chance, result)
+        result = exp(-1*(float(quality) / float(new_quality))/(temperature * modulation))
+        # print "chance=%f, result=%f" % (chance, result)
         return True if chance <= result else False
 
     phase = WARMING
@@ -141,25 +163,30 @@ def simulated_annealing(instance):
             return prev
 
     best_quality = instance.solution.used_oligos_count
+    best_usages = { oligo: oligo.used_times for oligo in instance.oligos }
+    best_solution = instance.solution
 
-    # while (moves_without_improvement < max_moves_without_improvement) and (not time_exc) \
-    #       and len(filter(lambda x: not x.used, instance.oligos)):
-    while (moves_without_improvement < max_moves_without_improvement) and (not time_exc):
-        print ''
-        print len(filter(lambda x: not x.used, instance.oligos))
+    # Tabu oligo list
+    tabu_overlaps = []
+
+    # Main loop
+    while (moves_without_improvement < max_moves_without_improvement) and (not time_exc) \
+          and len(filter(lambda x: not x.used, instance.oligos)) > 0:
+        # os.system('clear')
+        # print ''
+        # print len(filter(lambda x: not x.used, instance.oligos))
         quality = instance.solution.used_oligos_count
         attempts = 0
-        transformed_solution, added_oligos, deleted_oligos, old_overlaps = transform(instance.solution)
-        new_quality = transformed_solution.used_oligos_count
+        transformed_solution, old_overlaps, old_oligo_usage = transform(instance.solution)
+        new_quality = len(filter(lambda o: o.used, instance.oligos))# transformed_solution.used_oligos_count
 
         def revert_oligo_usage():
-            for oligo in added_oligos: oligo.used_times -= 1
-            for oligo in deleted_oligos: oligo.used_times += 1
-            # print "*** Reverting. Old overlaps count: %d, new: %d" % (len(old_overlaps), len(instance.solution.overlaps))
-            # instance.solution.overlaps = old_overlaps
+            for (oligo, old_usage) in old_oligo_usage.items():
+                oligo.used_times = old_usage
+            instance.solution.overlaps = old_overlaps
 
         if (new_quality > quality): # better
-            print "NAJSYS"
+            # print "ACCEPTED BETTER"
             if mode == WARMING: accepted_moves_out_of_last_n = update_last_moves_acceptance(True, accepted_moves_out_of_last_n)
             accepted_moves += 1
             quality = new_quality
@@ -167,25 +194,22 @@ def simulated_annealing(instance):
                 moves_without_improvement = 0
                 best_quality = new_quality
                 best_solution = transformed_solution
-            instance.solution = transformed_solution
-        elif new_quality == quality: # the same
-            print "NIHIL NOVI"
-            accepted_moves += 1
-            moves_without_improvement += 1
-            if mode == WARMING: accepted_moves_out_of_last_n = update_last_moves_acceptance(True, accepted_moves_out_of_last_n)
+                best_usages = { oligo: oligo.used_times for oligo in instance.oligos }
+                tabu_overlaps = []
+                revert_attempts = 0
             instance.solution = transformed_solution
         else: # worse
-            print "WORST"
             moves_without_improvement += 1
             succ = success()
-            print succ
+            # print succ
             accepted_moves_out_of_last_n = update_last_moves_acceptance(succ, accepted_moves_out_of_last_n)
             if succ:
+                # print "WORSE ACCEPTED"
                 accepted_moves += 1
                 quality = new_quality
                 instance.solution = transformed_solution
             else:
-                print "REJECTED"
+                # print "WORSE REJECTED"
                 revert_oligo_usage()
                 if mode == WARMING and accepted_moves > cooling_age_length/10:
                     accepted_moves = 0
@@ -199,11 +223,31 @@ def simulated_annealing(instance):
             temperature *= alpha_cooling
             accepted_moves = 0
 
+
         mode_str = "+" if mode == WARMING else "-"
-        print "Mode:%s\tQual:%d\tBest:%d\tTemp:%d\tAccM:%d\tAccPerc:%f\tMw/oI:%d" \
+        print "Mode:%s\tQual:%d\tBest:%d\tTemp:%d\tAccM:%d\tAccPerc:%f\tMw/oI:%d\tRev:%d\tTabu:%d" \
                 % (mode_str, quality, best_quality, temperature, accepted_moves_out_of_last_n, \
-                   float(accepted_moves_out_of_last_n) / last_moves_size, moves_without_improvement)
+                   float(accepted_moves_out_of_last_n) / last_moves_size, moves_without_improvement, revert_attempts, len(tabu_overlaps))
+
+        def revert_to_best():
+            global revert_attempts
+            for (oligo, old_usage) in best_usages.items():
+                oligo.used_times = old_usage
+            instance.solution = best_solution
+            revert_attempts += 1
+            # print "Reverting to best"
+
+        # Revert to best if quality drops below 0.9 * best
+        # print "Threshold: ", revert_threshold * best_quality, ", quality: ", quality
+        if quality <= revert_threshold * best_quality:
+            revert_to_best()
+        else:
+            pass
+            # print "Not reverting"
+
+        # print 'Press enter...'
+        # raw_input()
 
 
-
-    return instance.solution
+    revert_to_best()
+    return best_solution
