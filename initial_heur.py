@@ -1,6 +1,7 @@
 from solver import Solution
+from solver import log_to_file
+from time import time
 import random
-import re
 
 def create_initial_solution(instance, path):
 
@@ -9,14 +10,20 @@ def create_initial_solution(instance, path):
 	oligos_len = len(oligos[0].nuc)
 
 	overlaps_pairs = create_overlaps_hash(oligos)
+
+	start = time()
 	starting_oligo = choose_starting_oligo(oligos, overlaps_pairs)
 	sequence, overlaps = make_starting_solution(starting_oligo, result_length, oligos_len, overlaps_pairs)
+	stop = time()
+
+	elapsed_time = round(stop-start,2)
 
 	solution = Solution()
 	solution.sequence = sequence
 	solution.overlaps = overlaps
 
-	log_to_file (solution, overlaps, sequence, oligos_len, path)
+
+	log_to_file (instance, solution, overlaps, sequence, oligos_len, path, elapsed_time, "INITIAL")
 
 	return solution
 
@@ -139,37 +146,3 @@ def make_starting_solution(starting_oligo, result_length, oligos_len, overlaps_p
 		sequence = sequence[0:result_length]
 
 	return sequence, overlaps
-
-def log_to_file (solution, overlaps, sequence,  oligos_len, path):
-	log_path = 'tests/sequence_' + path
-	seq = open(log_path, 'a')
-
-
-	m = re.search('[0-9]+\.([0-9]+)(\+|-)([0-9]+)', path)
-	if re.search('.+\+', path) != None:
-		desired_oligos_use = int(m.group(1))
-	else:
-		desired_oligos_use = int(m.group(1)) - int(m.group(3))
-	percentage_use = (float(solution.used_oligos_count)/desired_oligos_use)*100.0
-	seq.write('Used %d oligonucleotides\n' % solution.used_oligos_count)
-	seq.write('Use rates is %.2f%%\n' % percentage_use)
-	
-	c = 0
-	for i in xrange(len(sequence)):
-		seq.write(sequence[i])
-		c += 1
-		if c % 50 == 0:
-			seq.write('\n')
-			c = 0
-
-	seq.write('\n\n')
-
-	shift = 0
-	for tup in overlaps:
-		shift = tup[3] % 100
-		offset = shift * ' '
-		seq.write(offset + tup[0].nuc + '\n')
-	
-	shift += oligos_len - overlaps[-1][2]
-	offset = shift * ' '
-	seq.write(offset + overlaps[-1][1].nuc + '\n')

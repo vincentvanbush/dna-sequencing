@@ -1,4 +1,5 @@
 from solver import Solution
+from solver import log_to_file
 from math import exp
 from copy import copy
 import random
@@ -205,5 +206,6 @@ def simulated_annealing(instance, path):
                    float(accepted_moves_out_of_last_n) / last_moves_size, moves_without_improvement)
 
 
+    log_to_file(instance, instance.solution, None, instance.solution.sequence, oligo_length, path, None, "ANNEALING")
 
     return instance.solution

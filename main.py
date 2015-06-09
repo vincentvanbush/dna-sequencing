@@ -39,7 +39,10 @@ if __name__ == '__main__':
         else:
             desired_oligos_use = len(instance.oligos)
 
-        percentage_use = (float(solution.used_oligos_count)/desired_oligos_use)*100.0
+            
+
+        # percentage_use = (float(solution.used_oligos_count)/desired_oligos_use)*100.0
+        percentage_use = (float(len(filter(lambda o: o.used, instance.oligos)))/desired_oligos_use)*100.0
 
         # print 'File name: %s' % fname
         print 'Used %d oligonucleotides' % solution.used_oligos_count
